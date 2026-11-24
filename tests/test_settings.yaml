@@ -1,0 +1,2 @@
+# Test-only values (the UDP tests bind to an OS-chosen port on this host).
+udp_test_host: localhost

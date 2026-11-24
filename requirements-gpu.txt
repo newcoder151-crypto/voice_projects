@@ -1,0 +1,4 @@
+# CUDA 12 runtime libraries for CTranslate2 (faster-whisper 1.2.x needs CUDA 12 + cuDNN 9).
+# Skip this file if the target machine already has CUDA 12 and cuDNN 9 installed system-wide.
+nvidia-cublas-cu12>=12.4,<13
+nvidia-cudnn-cu12==9.*

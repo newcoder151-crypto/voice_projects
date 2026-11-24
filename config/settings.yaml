@@ -1,0 +1,77 @@
+# All hosts, ports, paths, model names and limits live here. Nothing is hardcoded in code.
+# Relative paths are resolved from the project root (the folder that contains config/).
+
+paths:
+  state_dir: data/state          # remembers which audio files are already processed
+  log_dir: logs
+
+logging:
+  level: INFO
+  max_bytes: 5000000
+  backup_count: 5
+
+asr:
+  # large-v3 is the most accurate and wants a GPU. If the target turns out to have no GPU,
+  # use a smaller model (e.g. small.en for English only, or medium) and change both lines below.
+  model_name: large-v3           # only used by scripts/download_models.py on the staging machine
+  model_path: models/asr/faster-whisper-large-v3
+  device: auto                   # auto = GPU if one is found, otherwise CPU; or force cuda / cpu
+  device_index: 0
+  compute_type: auto             # auto picks the best type for the device (float16 on GPU)
+  beam_size: 5
+  language: null                 # null = auto-detect; per-project values below override this
+  file_vad:                      # VAD used by faster-whisper for audio files
+    threshold: 0.5
+    min_speech_duration_ms: 250
+    min_silence_duration_ms: 500
+    speech_pad_ms: 200
+
+files:
+  extensions: [.wav, .mp3, .m4a, .flac, .ogg, .opus, .aac, .wma, .mp4]
+  poll_seconds: 5
+  settle_seconds: 2              # ignore files modified more recently than this (still being copied)
+  max_retries: 3
+
+live:
+  source: microphone             # microphone | stream
+  sample_rate: 16000             # Silero VAD supports 16000 or 8000
+  frame_samples: 512             # 512 samples at 16 kHz (32 ms) is what Silero VAD expects
+  microphone_device: null        # null = system default input; or a device index / name
+  stream_url: ""                 # used when source = stream (any URL ffmpeg can read)
+  ffmpeg_path: ffmpeg
+  ffmpeg_input_args: []          # extra ffmpeg input options for the stream, e.g. ["-rtsp_transport", "tcp"]
+  vad:
+    threshold: 0.5
+    min_silence_ms: 500          # silence that closes a phrase
+    speech_pad_ms: 100
+  pre_roll_ms: 300               # audio kept from before speech was detected
+  min_speech_ms: 250             # sounds with less actual speech than this are dropped (padding not counted)
+  max_utterance_sec: 20          # force a flush if someone talks without a pause
+
+dial:                            # Project 1: voice dial
+  input_dir: data/dial/input
+  language: en
+  initial_prompt: null           # optional Whisper hint, e.g. "Dial 9 8 7 6 5 4 3 2 1 0."
+  triggers: [dial, call, phone]
+  require_trigger: true          # only numbers spoken after a trigger word are sent
+  min_digits: 3
+  max_digits: 15
+  allow_plus: true               # "plus nine one ..." becomes +91...
+  number_pattern: null           # optional regex the final number must match, e.g. "^\\+?[0-9]{10,13}$"
+  dedupe_seconds: 5              # do not send the same number twice within this time
+  udp:
+    host: 127.0.0.1              # CHANGE: address of the receiver on the network
+    port: 9000                   # CHANGE: port of the receiver
+    # Default message is the bare number, e.g. 9876543210 or +919876543210 (UTF-8 text).
+    # Change it if the receiver wants another format, e.g. "DIAL {number}" or "{number}\n".
+    payload_template: "{number}"
+
+    encoding: utf-8
+    dry_run: false               # true = log the message instead of sending it
+
+transcribe:                      # Project 2: transcription to files
+  input_dir: data/transcribe/input
+  output_dir: data/transcribe/output
+  language: null                 # null = auto-detect
+  initial_prompt: null
+  timestamps_in_txt: true
